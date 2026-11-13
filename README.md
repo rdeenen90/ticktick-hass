@@ -99,6 +99,10 @@ Everything runs in Docker, so no local Python is needed.
 - **Devcontainer:** open the repository in VS Code and choose "Reopen in Container" (or use GitHub Codespaces). Tests then run with plain `pytest`.
 - **Try it in Home Assistant:** inside the devcontainer, `bash scripts/develop.sh` starts a throwaway Home Assistant on http://localhost:8123 with the integration loaded. Its data lives in `./config`, which is not committed.
 
+## Support
+
+If this integration is useful to you, you can [buy me a coffee or beer](https://paypal.me/rdeenen90) 🍻
+
 ## Credits
 
 This is a fork of [Hantick/ticktick-home-assistant](https://github.com/Hantick/ticktick-home-assistant), updated for current Home Assistant releases and extended. Thanks to Hantick for the original integration, and to the contributors whose upstream pull requests are included here. If you'd like to thank the original author, you can [buy them a coffee or beer](https://paypal.me/hantick).
