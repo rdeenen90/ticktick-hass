@@ -1,6 +1,9 @@
 {
   "domain": "ticktick",
   "name": "TickTick",
+  "categories": [
+    "productivity_information.calendars_todos"
+  ],
   "codeowners": [
     "@rdeenen90"
   ],

@@ -10,8 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/rdeenen90/ticktick-hass/releases/latest"><img src="https://img.shields.io/github/v/release/rdeenen90/ticktick-hass?style=flat-square" alt="Latest release"></a>
-  <a href="https://github.com/rdeenen90/ticktick-hass/actions/workflows/validate.yaml"><img src="https://img.shields.io/github/actions/workflow/status/rdeenen90/ticktick-hass/validate.yaml?branch=main&style=flat-square&label=tests" alt="Tests"></a>
-  <a href="https://github.com/rdeenen90/ticktick-hass/actions/workflows/hassfest.yml"><img src="https://img.shields.io/github/actions/workflow/status/rdeenen90/ticktick-hass/hassfest.yml?branch=main&style=flat-square&label=hassfest" alt="hassfest"></a>
+  <a href="https://github.com/rdeenen90/ticktick-hass/actions/workflows/validate.yaml"><img src="https://img.shields.io/github/actions/workflow/status/rdeenen90/ticktick-hass/validate.yaml?branch=main&style=flat-square&label=checks" alt="Checks"></a>
   <img src="https://img.shields.io/badge/Home%20Assistant-2026.10%2B-41BDF5?style=flat-square&logo=homeassistant&logoColor=white" alt="Home Assistant 2026.10 or newer">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/rdeenen90/ticktick-hass?style=flat-square" alt="License"></a>
 </p>

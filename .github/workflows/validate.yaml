@@ -1,14 +1,30 @@
 name: Validate
 
 on:
-  push: 
+  push:
+    branches:
+      - main
   pull_request:
   schedule:
-    - cron: "0 0 * * *"
+    # Weekly, to catch a new Home Assistant release breaking the integration
+    - cron: "0 5 * * 1"
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
-  validate-hacs:
+  hassfest:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v7"
+      - uses: "home-assistant/actions/hassfest@master"
+
+  hacs:
     runs-on: "ubuntu-latest"
     steps:
       - name: HACS validation
@@ -19,8 +35,8 @@ jobs:
   tests:
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v4"
-      - uses: "actions/setup-python@v5"
+      - uses: "actions/checkout@v7"
+      - uses: "actions/setup-python@v7"
         with:
           python-version: "3.14"
           cache: "pip"
