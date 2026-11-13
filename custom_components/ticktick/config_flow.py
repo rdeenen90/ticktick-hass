@@ -1,7 +1,7 @@
 """Config flow for TickTick Integration."""
 
-from collections.abc import Mapping
 import logging
+from collections.abc import Mapping
 from typing import Any
 
 from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult

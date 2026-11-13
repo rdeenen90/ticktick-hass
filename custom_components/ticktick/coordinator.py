@@ -1,8 +1,8 @@
 """DataUpdateCoordinator for the TickTick component."""
 
 import asyncio
-from datetime import timedelta
 import logging
+from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant

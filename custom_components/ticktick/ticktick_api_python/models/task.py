@@ -1,7 +1,7 @@
-from datetime import date, datetime
-from enum import Enum
 import inspect
 import json
+from datetime import date, datetime
+from enum import Enum
 
 from .check_list_item import CheckListItem, TaskStatus
 

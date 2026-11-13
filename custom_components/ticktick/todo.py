@@ -1,6 +1,6 @@
 import asyncio
-from typing import Any
 from datetime import date, datetime, time
+from typing import Any
 
 from homeassistant.components.todo import (
     TodoItem,

@@ -16,22 +16,18 @@ jobs:
         with:
           category: "integration"
 
-  import-check:
+  tests:
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v4"
       - uses: "actions/setup-python@v5"
         with:
           python-version: "3.14"
-      - name: Install Home Assistant
-        run: pip install homeassistant
-      - name: Import the integration against the latest Home Assistant
-        run: |
-          python -c "
-          import homeassistant
-          print('Home Assistant', homeassistant.__version__)
-          import custom_components.ticktick
-          import custom_components.ticktick.application_credentials
-          import custom_components.ticktick.config_flow
-          import custom_components.ticktick.todo
-          "
+          cache: "pip"
+          cache-dependency-path: "requirements_test.txt"
+      - name: Install test requirements
+        run: pip install -r requirements_test.txt
+      - name: Lint
+        run: ruff check custom_components tests
+      - name: Test
+        run: pytest

@@ -11,7 +11,6 @@ from ..const import (
     GET_TASK,
     UPDATE_TASK,
 )
-
 from .models.project import Kind, Project
 from .models.project_with_tasks import ProjectWithTasks
 from .models.task import Task
@@ -120,7 +119,7 @@ class TickTickAPIClient:
     async def _get_response(
         self, response: ClientResponse
     ) -> tuple[ClientResponse, bool]:
-        if response.ok:
+        if response.status < 400:
             try:
                 json_data = await response.json()
             except Exception:  # noqa: BLE001

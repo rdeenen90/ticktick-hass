@@ -1,7 +1,6 @@
 """API for TickTick Integration bound to Home Assistant OAuth."""
 
 from aiohttp import ClientSession
-
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import config_entry_oauth2_flow
 

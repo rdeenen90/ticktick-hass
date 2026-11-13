@@ -1,8 +1,8 @@
 """Service Handlers for TickTick Integration."""
 
+import logging
 from collections.abc import Callable
 from datetime import datetime
-import logging
 from typing import Any, TypeVar
 from zoneinfo import ZoneInfo
 
