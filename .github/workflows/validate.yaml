@@ -15,3 +15,23 @@ jobs:
         uses: "hacs/action@main"
         with:
           category: "integration"
+
+  import-check:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "actions/setup-python@v5"
+        with:
+          python-version: "3.14"
+      - name: Install Home Assistant
+        run: pip install homeassistant
+      - name: Import the integration against the latest Home Assistant
+        run: |
+          python -c "
+          import homeassistant
+          print('Home Assistant', homeassistant.__version__)
+          import custom_components.ticktick
+          import custom_components.ticktick.application_credentials
+          import custom_components.ticktick.config_flow
+          import custom_components.ticktick.todo
+          "
