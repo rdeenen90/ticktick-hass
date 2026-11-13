@@ -4,19 +4,16 @@ import asyncio
 from datetime import timedelta
 import logging
 
-from custom_components.ticktick.ticktick_api_python.models.project import Project
-from custom_components.ticktick.ticktick_api_python.models.project_with_tasks import (
-    ProjectWithTasks,
-)
-from custom_components.ticktick.ticktick_api_python.ticktick_api import (
-    TickTickAPIClient,
-    TickTickAuthError,
-)
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+
+from .ticktick_api_python.models.project import Project
+from .ticktick_api_python.models.project_with_tasks import ProjectWithTasks
+from .ticktick_api_python.ticktick_api import TickTickAPIClient, TickTickAuthError
+
+type TickTickConfigEntry = ConfigEntry[TickTickCoordinator]
 
 
 class TickTickCoordinator(DataUpdateCoordinator[list[ProjectWithTasks]]):

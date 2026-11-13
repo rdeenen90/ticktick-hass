@@ -2,29 +2,28 @@ import asyncio
 from typing import Any
 from datetime import date, datetime, time
 
-from custom_components.ticktick.coordinator import TickTickCoordinator
-from custom_components.ticktick.ticktick_api_python.models.task import Task, TaskStatus
-
 from homeassistant.components.todo import (
     TodoItem,
     TodoItemStatus,
     TodoListEntity,
     TodoListEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .coordinator import TickTickConfigEntry, TickTickCoordinator
+from .ticktick_api_python.models.task import Task, TaskStatus
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    entry: TickTickConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the TickTick todo platform config entry."""
-    coordinator: TickTickCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     projects = await coordinator.async_get_projects()
     async_add_entities(
         TickTickTodoListEntity(coordinator, entry.entry_id, project.id, project.name)
