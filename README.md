@@ -121,7 +121,16 @@ data:
 
 ## Options
 
-Under Settings → Devices & services → TickTick → Configure you can set the **polling interval** (1 to 60 minutes, default 1). Each update makes one request per list, so raise it if you have many lists and run into TickTick's rate limit.
+Under Settings → Devices & services → TickTick → Configure you can set the **polling interval** (1 to 60 minutes, default 1).
+
+## Many lists or tasks
+
+TickTick has no way to fetch all lists at once, so each update makes one request per list, plus one for the list of projects. The requests are sent one at a time, because TickTick refuses a burst of them (`exceed_query_limit`). If you have many lists:
+
+- **Disable the lists you don't need.** A list whose to-do list and calendar entities are both disabled is not fetched at all. It is also left out of the sensors.
+- **Raise the polling interval** under Options.
+
+A change made from Home Assistant only fetches the list it was made in.
 
 ## Known limitations
 

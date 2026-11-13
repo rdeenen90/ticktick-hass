@@ -350,7 +350,7 @@ async def _handle_update_task(call: ServiceCall) -> dict[str, Any]:
         hint = await _project_hint(coordinator, project_id)
         raise HomeAssistantError(f"Error updating task: {e}{hint}") from e
 
-    await coordinator.async_refresh()
+    await coordinator.async_refresh_project(project_id)
     return {"data": response}
 
 
@@ -406,7 +406,7 @@ def _create_handler(
 
         if refresh:
             # Show the change in the to-do lists right away
-            await coordinator.async_refresh()
+            await coordinator.async_refresh_project(args.get(PROJECT_ID))
         return {"data": response}
 
     return handler

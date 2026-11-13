@@ -117,7 +117,13 @@ class Task(CheckListItem):
                 return value.value
             return value
 
-        d = filter_none({k: v for k, v in self.__dict__.items() if k != "cleared"})
+        d = filter_none(
+            {
+                k: v
+                for k, v in self.__dict__.items()
+                if k != "cleared" and not k.startswith("_")
+            }
+        )
 
         # Convert nested checklist items to plain dicts (and filter Nones there too)
         if "items" in d and isinstance(d["items"], list):

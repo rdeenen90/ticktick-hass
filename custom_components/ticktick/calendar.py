@@ -1,6 +1,6 @@
 """Calendars showing the TickTick tasks that have a due date, one per list."""
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant, callback
@@ -31,20 +31,29 @@ async def async_setup_entry(
     )
 
 
-def _event_from_task(task: Task) -> CalendarEvent | None:
-    """Return the calendar event for a task, or None if it has no due date."""
+def _span(task: Task) -> tuple[date | datetime, date | datetime] | None:
+    """Return when a task starts and ends as an event, or None without due date."""
     due = due_from_task(task)
     if due is None:
         return None
     start = min(start_from_task(task) or due, due)
     if isinstance(due, datetime):
-        end = due if due > start else start + DEFAULT_EVENT_DURATION
-    else:
-        # All-day events end on the day after their last day
-        end = due + timedelta(days=1)
+        return start, due if due > start else start + DEFAULT_EVENT_DURATION
+    # All-day events end on the day after their last day
+    return start, due + timedelta(days=1)
+
+
+def _as_local(value: date | datetime) -> datetime:
+    """Return the moment a date or datetime stands for, in local time."""
+    if isinstance(value, datetime):
+        return dt_util.as_local(value)
+    return dt_util.start_of_local_day(value)
+
+
+def _event(task: Task, span: tuple[date | datetime, date | datetime]) -> CalendarEvent:
     return CalendarEvent(
-        start=start,
-        end=end,
+        start=span[0],
+        end=span[1],
         summary=task.title,
         description=task.content or task.desc or None,
         uid=task.id,
@@ -75,25 +84,36 @@ class TickTickCalendarEntity(CoordinatorEntity[TickTickCoordinator], CalendarEnt
             self._attr_name = project.name
         super()._handle_coordinator_update()
 
-    def _events(self) -> list[CalendarEvent]:
+    def _spans(self) -> list[tuple[Task, datetime, datetime]]:
+        """Return each dated task with its local start and end.
+
+        Building a CalendarEvent validates it, which is slow for thousands of
+        tasks, so events are only built for the tasks that are asked for.
+        """
         project_with_tasks = (self.coordinator.data or {}).get(self._project_id)
         tasks = (project_with_tasks.tasks if project_with_tasks else None) or ()
-        return [event for task in tasks if (event := _event_from_task(task))]
+        return [
+            (task, _as_local(span[0]), _as_local(span[1]))
+            for task in tasks
+            if (span := _span(task))
+        ]
 
     @property
     def event(self) -> CalendarEvent | None:
         """Return the current or next upcoming event."""
         now = dt_util.now()
-        upcoming = [event for event in self._events() if event.end_datetime_local > now]
-        return min(upcoming, key=lambda event: event.start_datetime_local, default=None)
+        upcoming = [item for item in self._spans() if item[2] > now]
+        if not upcoming:
+            return None
+        task = min(upcoming, key=lambda item: item[1])[0]
+        return _event(task, _span(task))
 
     async def async_get_events(
         self, hass: HomeAssistant, start_date: datetime, end_date: datetime
     ) -> list[CalendarEvent]:
         """Return the events that overlap the given time range."""
         return [
-            event
-            for event in self._events()
-            if event.start_datetime_local < end_date
-            and event.end_datetime_local > start_date
+            _event(task, _span(task))
+            for task, start, end in self._spans()
+            if start < end_date and end > start_date
         ]

@@ -49,14 +49,28 @@ def due_from_task(task: Task) -> date | datetime | None:
 
     All-day tasks become a date in the task's time zone; others an aware datetime.
     """
-    due = parse_ticktick_datetime(task.dueDate)
-    return None if due is None else _as_home_assistant_date(due, task)
+    # Sensors and calendars ask for this on every state update; parsing is the
+    # costly part with thousands of tasks, so do it once per fetched task
+    try:
+        return task._ha_due
+    except AttributeError:
+        due = parse_ticktick_datetime(task.dueDate)
+        task._ha_due = None if due is None else _as_home_assistant_date(due, task)
+        return task._ha_due
 
 
 def start_from_task(task: Task) -> date | datetime | None:
     """Return the task's start date, falling back to its due date."""
-    start = parse_ticktick_datetime(task.startDate)
-    return due_from_task(task) if start is None else _as_home_assistant_date(start, task)
+    try:
+        return task._ha_start
+    except AttributeError:
+        start = parse_ticktick_datetime(task.startDate)
+        task._ha_start = (
+            due_from_task(task)
+            if start is None
+            else _as_home_assistant_date(start, task)
+        )
+        return task._ha_start
 
 
 @callback

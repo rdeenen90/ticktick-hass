@@ -12,6 +12,14 @@ Adds calendars, task count sensors and diagnostics. Requires Home Assistant 2026
 - **Sensors.** Three sensors count tasks across all lists: `sensor.ticktick_overdue_tasks`, `sensor.ticktick_tasks_due_today` and `sensor.ticktick_open_tasks`. Their `lists` attribute holds the count per list, and the first two also list up to 20 matching tasks with title, list and due date, for use in notifications.
 - **Diagnostics.** Download diagnostics from the integration's page to attach to a bug report. They contain counts and settings only: no token, task titles or list names.
 
+### Many lists or tasks
+
+- **Lists are fetched one at a time.** TickTick refuses a burst of simultaneous requests (`exceed_query_limit`), which is what accounts with many lists ran into.
+- **A change refreshes only its own list.** Adding, completing or editing a task used to fetch every list again.
+- **Disabled lists are not polled.** Disable both the to-do list and the calendar of a list you don't need, and it no longer costs a request.
+- **Time-outs.** A request that TickTick does not answer within 30 seconds is given up on; that list keeps its last known tasks.
+- **Faster with thousands of tasks.** Dates are parsed once per update and calendar events are only built when asked for.
+
 ### Changes in behaviour
 
 - A calendar entity is created for every list. Disable the ones you don't want in the entities list.

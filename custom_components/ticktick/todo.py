@@ -135,7 +135,7 @@ class TickTickTodoListEntity(CoordinatorEntity[TickTickCoordinator], TodoListEnt
             project_with_tasks = projects_with_tasks.get(self._project_id)
             if project_with_tasks and project_with_tasks.tasks:
                 for task in project_with_tasks.tasks:
-                    tasks_to_add.insert(0,  # noqa: PERF401
+                    tasks_to_add.append(  # noqa: PERF401
                         TodoItem(
                             uid=task.id,
                             summary=task.title,
@@ -151,6 +151,8 @@ class TickTickTodoListEntity(CoordinatorEntity[TickTickCoordinator], TodoListEnt
 
             # Replace even when empty, otherwise the last removed or completed
             # task stays in Home Assistant after the list is cleared (#18).
+            # Reversed, to show the tasks in the same order as TickTick
+            tasks_to_add.reverse()
             self._attr_todo_items = tasks_to_add
 
         super()._handle_coordinator_update()
@@ -161,7 +163,7 @@ class TickTickTodoListEntity(CoordinatorEntity[TickTickCoordinator], TodoListEnt
             raise ValueError("Only active tasks may be created.")
         mapped_task, _ = _map_task(item, self._project_id)
         await self.coordinator.api.create_task(mapped_task)
-        await self.coordinator.async_refresh()
+        await self.coordinator.async_refresh_project(self._project_id)
 
     async def async_update_todo_item(self, item: TodoItem) -> None:
         """Update a To-do item."""
@@ -195,7 +197,7 @@ class TickTickTodoListEntity(CoordinatorEntity[TickTickCoordinator], TodoListEnt
         )
 
         if await process_status_change():  # This should be changed if completing the task will support also changing description etc.
-            await self.coordinator.async_refresh()
+            await self.coordinator.async_refresh_project(self._project_id)
             return
 
         mapped_task, is_modified = _map_task(item, self._project_id, api_task)
@@ -203,7 +205,7 @@ class TickTickTodoListEntity(CoordinatorEntity[TickTickCoordinator], TodoListEnt
         if is_modified:
             await self.coordinator.api.update_task(mapped_task)
 
-        await self.coordinator.async_refresh()
+        await self.coordinator.async_refresh_project(self._project_id)
 
     async def async_delete_todo_items(self, uids: list[str]) -> None:
         """Delete a To-do item."""
@@ -213,7 +215,7 @@ class TickTickTodoListEntity(CoordinatorEntity[TickTickCoordinator], TodoListEnt
                 for uid in uids
             ]
         )
-        await self.coordinator.async_refresh()
+        await self.coordinator.async_refresh_project(self._project_id)
 
     async def async_added_to_hass(self) -> None:
         """When entity is added to hass update state from existing coordinator data."""
