@@ -210,6 +210,53 @@ delete_project:
       example: 6987a8plg0rad90bc38b672f
       selector:
         text: null
+update_project:
+  name: Update project
+  description: "Updates a project in TickTick. Only provided fields will be updated."
+  fields:
+    projectId:
+      name: Project ID
+      description: ID of the project (list) of tasks in TickTick.
+      required: true
+      example: 6987a8plg0rad90bc38b672f
+      selector:
+        text: null
+    name:
+      name: Name
+      description: "Name of the project."
+      example: "Shopping list"
+      selector:
+        text: null
+    color:
+      name: Project Color
+      description: "Color of the project"
+      example: "#F18181"
+      selector:
+        text: null
+    sortOrder:
+      name: Sort Order
+      description: "Sort order value of the project."
+      selector:
+        number:
+          min: 0
+          max: 1000
+    viewMode:
+      name: View Mode
+      description: "View mode of the project."
+      selector:
+        select:
+          options:
+            - list
+            - kanban
+            - timeline
+    kind:
+      name: Project Kind
+      description: "Kind of the project."
+      selector:
+        select:
+          options:
+            - TASK
+            - NOTE
 update_task:
   name: Update Task
   description: "Updates an existing task in TickTick. Only provided fields will be updated."

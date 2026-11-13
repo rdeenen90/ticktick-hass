@@ -6,6 +6,9 @@
         "create_task": {
             "service": "mdi:creation"
         },
+        "update_task": {
+            "service": "mdi:pencil"
+        },
         "complete_task": {
             "service": "mdi:check-decagram"
         },
@@ -14,6 +17,21 @@
         },
         "get_projects": {
             "service": "mdi:list-box"
+        },
+        "get_project": {
+            "service": "mdi:list-box-outline"
+        },
+        "get_detailed_project": {
+            "service": "mdi:format-list-checks"
+        },
+        "create_project": {
+            "service": "mdi:playlist-plus"
+        },
+        "update_project": {
+            "service": "mdi:playlist-edit"
+        },
+        "delete_project": {
+            "service": "mdi:playlist-remove"
         }
     }
 }

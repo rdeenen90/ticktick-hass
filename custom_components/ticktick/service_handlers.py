@@ -6,15 +6,39 @@ from datetime import datetime
 from typing import Any, TypeVar
 from zoneinfo import ZoneInfo
 
+import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, PROJECT_ID, TASK_ID
 from .coordinator import TickTickCoordinator
+from .ticktick_api_python.models.project import Kind, ViewMode
 from .ticktick_api_python.models.task import Task, TaskPriority
 
 _LOGGER = logging.getLogger(__name__)
+
+PROJECT_FIELDS = {
+    "color": cv.string,
+    "sortOrder": vol.Coerce(int),
+    "viewMode": vol.In([mode.value for mode in ViewMode]),
+    "kind": vol.In([kind.value for kind in Kind]),
+}
+PROJECT_SCHEMA = vol.Schema({vol.Required(PROJECT_ID): cv.string})
+CREATE_PROJECT_SCHEMA = vol.Schema(
+    {
+        vol.Required("name"): cv.string,
+        **{vol.Optional(field): check for field, check in PROJECT_FIELDS.items()},
+    }
+)
+UPDATE_PROJECT_SCHEMA = PROJECT_SCHEMA.extend(
+    {
+        vol.Optional("name"): cv.string,
+        **{vol.Optional(field): check for field, check in PROJECT_FIELDS.items()},
+    }
+)
 
 
 @callback
@@ -62,6 +86,74 @@ def async_register_services(hass: HomeAssistant) -> None:
         _create_handler("get_projects"),
         supports_response=SupportsResponse.ONLY,
     )
+    hass.services.async_register(
+        DOMAIN,
+        "get_project",
+        _create_project_handler("get_project", PROJECT_ID),
+        schema=PROJECT_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "get_detailed_project",
+        _create_project_handler("get_project_with_tasks", PROJECT_ID),
+        schema=PROJECT_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "create_project",
+        _create_project_handler("create_project", "name", *PROJECT_FIELDS, reload=True),
+        schema=CREATE_PROJECT_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "update_project",
+        _create_project_handler(
+            "update_project", PROJECT_ID, "name", *PROJECT_FIELDS, reload=True
+        ),
+        schema=UPDATE_PROJECT_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "delete_project",
+        _create_project_handler("delete_project", PROJECT_ID, reload=True),
+        schema=PROJECT_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
+
+def _create_project_handler(
+    method_name: str, *arg_names: str, reload: bool = False
+) -> Callable:
+    """Create a handler for a project endpoint; only given fields are passed on."""
+
+    async def handler(call: ServiceCall) -> dict[str, Any]:
+        coordinator = _get_coordinator(call.hass)
+        args = {arg: call.data[arg] for arg in arg_names if arg in call.data}
+        try:
+            response = await getattr(coordinator.api, method_name)(
+                **args, returnAsJson=True
+            )
+        except Exception as e:
+            raise HomeAssistantError(str(e)) from e
+
+        if reload:
+            entry = coordinator.config_entry
+            if method_name == "delete_project":
+                # The list is gone for good, so don't leave its entity behind
+                registry = er.async_get(call.hass)
+                unique_id = f"{entry.entry_id}-{call.data[PROJECT_ID]}"
+                if entity_id := registry.async_get_entity_id("todo", DOMAIN, unique_id):
+                    registry.async_remove(entity_id)
+            # The to-do lists are created at setup, so set up again to add,
+            # rename or drop the list this call changed
+            call.hass.config_entries.async_schedule_reload(entry.entry_id)
+        return {"data": response}
+
+    return handler
 
 
 def _get_coordinator(hass: HomeAssistant) -> TickTickCoordinator:

@@ -1,14 +1,20 @@
 """TickTick API Client."""
 
+import json
+
 from aiohttp import ClientResponse, ClientSession
 
 from ..const import (
     COMPLETE_TASK,
+    CREATE_PROJECT,
     CREATE_TASK,
+    DELETE_PROJECT,
     DELETE_TASK,
+    GET_PROJECT,
     GET_PROJECTS,
     GET_PROJECTS_WITH_TASKS,
     GET_TASK,
+    UPDATE_PROJECT,
     UPDATE_TASK,
 )
 from .models.project import Kind, Project
@@ -18,6 +24,24 @@ from .models.task import Task
 
 class TickTickAuthError(Exception):
     """TickTick rejected the access token."""
+
+
+def _project_body(
+    name: str | None,
+    color: str | None,
+    sortOrder: int | None,
+    viewMode: str | None,
+    kind: str | None,
+) -> str:
+    """Serialize the given project fields to json, leaving out unset ones."""
+    fields = {
+        "name": name,
+        "color": color,
+        "sortOrder": sortOrder,
+        "viewMode": viewMode,
+        "kind": kind,
+    }
+    return json.dumps({k: v for k, v in fields.items() if v is not None})
 
 
 class TickTickAPIClient:
@@ -98,6 +122,53 @@ class TickTickAPIClient:
             return response
 
         return ProjectWithTasks.from_dict(response)
+
+    async def get_project(self, projectId: str, returnAsJson: bool = False) -> Project:
+        """Return a project's basic information."""
+        response = await self._get(GET_PROJECT.format(projectId=projectId))
+        if returnAsJson:
+            return response
+
+        return Project.from_dict(response)
+
+    async def create_project(
+        self,
+        name: str,
+        color: str | None = None,
+        sortOrder: int | None = None,
+        viewMode: str | None = None,
+        kind: str | None = None,
+        returnAsJson: bool = False,
+    ) -> Project:
+        """Create a project."""
+        body = _project_body(name, color, sortOrder, viewMode, kind)
+        response = await self._post(CREATE_PROJECT, body)
+        if returnAsJson:
+            return response
+
+        return Project.from_dict(response)
+
+    async def update_project(
+        self,
+        projectId: str,
+        name: str | None = None,
+        color: str | None = None,
+        sortOrder: int | None = None,
+        viewMode: str | None = None,
+        kind: str | None = None,
+        returnAsJson: bool = False,
+    ) -> Project:
+        """Update a project; only the given fields are sent."""
+        body = _project_body(name, color, sortOrder, viewMode, kind)
+        response = await self._post(UPDATE_PROJECT.format(projectId=projectId), body)
+        if returnAsJson:
+            return response
+
+        return Project.from_dict(response)
+
+    async def delete_project(self, projectId: str, returnAsJson: bool = False) -> str:
+        """Delete a project."""
+        return await self._delete(DELETE_PROJECT.format(projectId=projectId))
 
     async def _get(self, url: str) -> ClientResponse:
         response = await self._session.get(f"https://{url}", headers=self._headers)

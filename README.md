@@ -37,15 +37,15 @@ Get, Create, Update, Delete, Complete Task
 
 ### Project Services
 
-Get (Create, Update, Delete are missing for now)
+- `ticktick.get_projects`: all projects
+- `ticktick.get_project`: one project by ID
+- `ticktick.get_detailed_project`: one project with its tasks, including the task IDs the task services need
+- `ticktick.create_project`, `ticktick.update_project`, `ticktick.delete_project`
+
+Creating, updating or deleting a project reloads the integration, so the matching to-do list is added, renamed or removed right away.
 
 ## Left to be done:
 
 - Create/Update Task Service: `items` - The list of subtasks
 - Create/Update Task Service: `reminders` - Can create some better builder for reminders
 - Create/Update Task Service: `repeatFlag` - Can create some better builder for reminders
-- Get Project By ID Service
-- Get Project By ID With Data Service
-- Create Project
-- Update Project
-- Delete Project
