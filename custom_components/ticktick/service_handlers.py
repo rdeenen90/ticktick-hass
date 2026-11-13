@@ -271,7 +271,8 @@ async def _handle_update_task(call: ServiceCall) -> dict[str, Any]:
     except ValueError as e:
         raise ServiceValidationError(str(e)) from e
     except Exception as e:
-        raise HomeAssistantError(f"Error updating task: {e}") from e
+        hint = await _project_hint(coordinator, project_id)
+        raise HomeAssistantError(f"Error updating task: {e}{hint}") from e
 
     await coordinator.async_refresh()
     return {"data": response}
@@ -318,7 +319,8 @@ def _create_handler(
         except ValueError as e:
             raise ServiceValidationError(str(e)) from e
         except Exception as e:
-            raise HomeAssistantError(str(e)) from e
+            hint = await _project_hint(coordinator, args.get(PROJECT_ID))
+            raise HomeAssistantError(f"{e}{hint}") from e
 
         if refresh:
             # Show the change in the to-do lists right away
@@ -326,6 +328,28 @@ def _create_handler(
         return {"data": response}
 
     return handler
+
+
+async def _project_hint(coordinator: TickTickCoordinator, project_id: Any) -> str:
+    """Explain a failed call that used a project ID TickTick does not know.
+
+    TickTick answers an unknown project ID with a bare 500, which says nothing.
+    """
+    if not project_id:
+        return ""
+    try:
+        projects = await coordinator.api.get_projects(returnAsJson=True)
+    except Exception:
+        return ""
+    # The inbox is a valid project that TickTick leaves out of the project list
+    if str(project_id).startswith("inbox") or any(
+        project.get("id") == project_id for project in projects
+    ):
+        return ""
+    return (
+        f". Project ID {project_id!r} is not one of your TickTick projects; "
+        "run ticktick.get_projects to find the right ID"
+    )
 
 
 def _sanitize_date(date: str, timeZone: str | None) -> str:

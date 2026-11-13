@@ -4,7 +4,7 @@ import json
 
 import pytest
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
 
@@ -201,6 +201,44 @@ async def test_update_task_replaces_subtasks(
     ]
     assert body["reminders"] == ["TRIGGER:-PT30M"]
     assert body["repeatFlag"] == "RRULE:FREQ=DAILY;INTERVAL=2"
+
+
+async def test_unknown_project_id_is_explained(
+    hass: HomeAssistant,
+    setup_integration: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """TickTick's bare 500 for an unknown project ID gets a useful message."""
+    aioclient_mock.post(CREATE_URL, status=500, json={"errorCode": "unknown_exception"})
+
+    with pytest.raises(HomeAssistantError, match="not one of your TickTick projects"):
+        await hass.services.async_call(
+            DOMAIN,
+            "create_task",
+            {"projectId": "<your project id>", "title": "Shopping"},
+            blocking=True,
+            return_response=True,
+        )
+
+
+async def test_other_api_errors_get_no_project_hint(
+    hass: HomeAssistant,
+    setup_integration: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """A failure with a known project ID is reported as it is."""
+    aioclient_mock.post(CREATE_URL, status=500, json={"errorCode": "unknown_exception"})
+
+    with pytest.raises(HomeAssistantError) as err:
+        await hass.services.async_call(
+            DOMAIN,
+            "create_task",
+            {"projectId": PROJECT_ID, "title": "Shopping"},
+            blocking=True,
+            return_response=True,
+        )
+
+    assert "not one of your" not in str(err.value)
 
 
 @pytest.mark.parametrize(
