@@ -13,6 +13,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
+from .builders import build_items, build_reminders, build_repeat_flag
 from .const import DOMAIN, PROJECT_ID, TASK_ID
 from .coordinator import TickTickCoordinator
 from .ticktick_api_python.models.project import Kind, ViewMode
@@ -235,22 +236,17 @@ async def _handle_update_task(call: ServiceCall) -> dict[str, Any]:
             _LOGGER.debug("Updated task start date to: %s", existing_task.startDate)
 
         if "repeatFlag" in call.data:
-            existing_task.repeatFlag = call.data.get("repeatFlag")
+            existing_task.repeatFlag = build_repeat_flag(call.data.get("repeatFlag"))
             _LOGGER.debug("Updating task repeat flag to: %s", existing_task.repeatFlag)
 
         if "reminders" in call.data:
-            reminders = call.data.get("reminders")
-            # Ensure reminders is a list of strings
-            if reminders is not None:
-                if isinstance(reminders, list):
-                    existing_task.reminders = reminders
-                else:
-                    # If a single string is provided, convert it to a list
-                    existing_task.reminders = [reminders]
-                _LOGGER.debug("Updating task reminders to: %s", existing_task.reminders)
-            else:
-                existing_task.reminders = []
-                _LOGGER.debug("Clearing task reminders")
+            existing_task.reminders = build_reminders(call.data.get("reminders"))
+            _LOGGER.debug("Updating task reminders to: %s", existing_task.reminders)
+
+        if "items" in call.data:
+            # Replaces the whole list; pass a subtask's id to keep that subtask
+            existing_task.items = build_items(call.data.get("items"))
+            _LOGGER.debug("Updating task to %s subtasks", len(existing_task.items))
 
         if "priority" in call.data:
             priority = call.data.get("priority")
@@ -272,6 +268,8 @@ async def _handle_update_task(call: ServiceCall) -> dict[str, Any]:
 
         # Update the task in TickTick
         response = await client.update_task(existing_task, returnAsJson=True)
+    except ValueError as e:
+        raise ServiceValidationError(str(e)) from e
     except Exception as e:
         raise HomeAssistantError(f"Error updating task: {e}") from e
 
@@ -310,10 +308,15 @@ def _create_handler(
                         args["priority"] = TaskPriority[args["priority"]]
                     except Exception:
                         args["priority"] = None
+                args["reminders"] = build_reminders(args.get("reminders"))
+                args["repeatFlag"] = build_repeat_flag(args.get("repeatFlag"))
+                args["items"] = build_items(args.get("items"))
                 instance = type(**args)
                 response = await client_method(instance, returnAsJson=True)
             else:
                 response = await client_method(**args, returnAsJson=True)
+        except ValueError as e:
+            raise ServiceValidationError(str(e)) from e
         except Exception as e:
             raise HomeAssistantError(str(e)) from e
 

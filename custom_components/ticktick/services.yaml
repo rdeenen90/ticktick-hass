@@ -71,13 +71,20 @@ create_task:
 
     repeatFlag:
       name: Repeat Flag
-      description: "Recurring rules of the task."
+      description: "How the task repeats: 'daily', 'weekly', 'monthly', 'yearly', 'weekdays', 'every 2 weeks', or a raw rule such as RRULE:FREQ=DAILY;INTERVAL=1."
+      example: "weekly"
       selector:
         text: null
+    items:
+      name: Subtasks
+      description: "List of subtasks: titles, or objects with title, completed and (to keep an existing subtask) id. On update this replaces the whole list."
+      example: '["Milk", {"title": "Bread", "completed": true}]'
+      selector:
+        object:
     reminders:
       name: Reminders
-      description: "Reminders triggers for a task in iCalendar format i.e TRIGGER:P0DT9H0M0S"
-      example: "TRIGGER:P0DT9H0M0S"
+      description: "When to remind: a time before the task is due ('30 minutes', '2 hours', '1 day'), 'on time', 'HH:MM' on the day of an all-day task, or a raw iCalendar trigger such as TRIGGER:P0DT9H0M0S."
+      example: "30 minutes"
       selector:
         text:
           multiple: true
@@ -323,10 +330,17 @@ update_task:
         text: null
     repeatFlag:
       name: Repeat Flag
-      description: "Recurring rules of the task."
+      description: "How the task repeats: 'daily', 'weekly', 'monthly', 'yearly', 'weekdays', 'every 2 weeks', or a raw rule such as RRULE:FREQ=DAILY;INTERVAL=1."
+      example: "weekly"
       required: false
       selector:
         text: null
+    items:
+      name: Subtasks
+      description: "List of subtasks: titles, or objects with title, completed and (to keep an existing subtask) id. On update this replaces the whole list."
+      example: '["Milk", {"title": "Bread", "completed": true}]'
+      selector:
+        object:
     reminders:
       name: Reminders
       description: "Reminders triggers for a task in iCalendar format i.e TRIGGER:P0DT9H0M0S"
