@@ -22,6 +22,8 @@ This integration uses the [TickTick Open API](https://developer.ticktick.com/doc
 ## Features
 
 - **To-do lists:** every TickTick list and the inbox, kept in step with TickTick as lists are added, renamed or deleted; add, rename, complete and delete tasks, with due dates (all-day or timed) and descriptions
+- **Calendars:** a calendar per list with the tasks that have a due date
+- **Sensors:** overdue, due today and open task counts across all lists
 - **Task services:** get, create, update, complete and delete, including subtasks, reminders, repeat rules and priority
 - **Project services:** get, create, update and delete lists
 - **Re-authentication:** when the TickTick token expires, Home Assistant asks you to sign in again instead of breaking
@@ -95,6 +97,28 @@ data:
 
 Project services that take a project accept `list` or `projectId`, like the task services. Creating, updating or deleting a project updates the to-do lists right away.
 
+## Calendars and sensors
+
+Each list also has a **calendar** entity, such as `calendar.groceries`, with its tasks that have a due date. An all-day task is an all-day event, a task with a start and a due time runs between them, and a task with only a due time is shown for half an hour. Disable the calendars you don't need in the entities list.
+
+Three **sensors** count tasks across all lists:
+
+| Sensor | Counts |
+|---|---|
+| `sensor.ticktick_overdue_tasks` | Tasks whose due time, or due day, has passed |
+| `sensor.ticktick_tasks_due_today` | Tasks due today, including ones whose time has already passed |
+| `sensor.ticktick_open_tasks` | All open tasks |
+
+Each has a `lists` attribute with the count per list. The first two also have a `tasks` attribute with up to 20 tasks (title, list and due date), which is handy in notifications:
+
+```yaml
+action: notify.notify
+data:
+  message: >-
+    Overdue: {{ state_attr('sensor.ticktick_overdue_tasks', 'tasks')
+    | map(attribute='title') | join(', ') }}
+```
+
 ## Options
 
 Under Settings → Devices & services → TickTick → Configure you can set the **polling interval** (1 to 60 minutes, default 1). Each update makes one request per list, so raise it if you have many lists and run into TickTick's rate limit.
@@ -104,6 +128,11 @@ Under Settings → Devices & services → TickTick → Configure you can set the
 - Lists are polled, so changes made in the TickTick app take up to one polling interval to appear. That includes lists that are added, renamed or deleted there.
 - A completed task cannot be reopened from Home Assistant, because TickTick's API does not return completed tasks.
 - If one list cannot be fetched, it keeps showing its last known tasks while the other lists update.
+- Sensors and calendars are recalculated on each update, so "overdue" can lag by up to one polling interval.
+
+## Troubleshooting
+
+To report a problem, download the diagnostics from Settings → Devices & services → TickTick (three-dot menu → Download diagnostics) and attach them to an [issue](https://github.com/rdeenen90/ticktick-hass/issues). They contain counts and settings only: no token, task titles or list names.
 
 ## Development
 
@@ -112,6 +141,10 @@ Everything runs in Docker, so no local Python is needed.
 - **Tests and lint:** `bash scripts/test.sh` runs `ruff` and `pytest` in a container, the same checks as CI.
 - **Devcontainer:** open the repository in VS Code and choose "Reopen in Container" (or use GitHub Codespaces). Tests then run with plain `pytest`.
 - **Try it in Home Assistant:** inside the devcontainer, `bash scripts/develop.sh` starts a throwaway Home Assistant on http://localhost:8123 with the integration loaded. Its data lives in `./config`, which is not committed.
+
+### Releasing
+
+Set the new `version` in `custom_components/ticktick/manifest.json` and add a `## <version>` section to `CHANGELOG.md`. When that reaches `main` and the checks pass, CI publishes the GitHub release with that section as its notes. The checks fail if the changelog section is missing.
 
 ## Support
 

@@ -1,6 +1,5 @@
 import asyncio
 from datetime import date, datetime, time
-from typing import Any
 
 from homeassistant.components.todo import (
     TodoItem,
@@ -9,13 +8,14 @@ from homeassistant.components.todo import (
     TodoListEntityFeature,
 )
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import INBOX_ID
 from .coordinator import TickTickConfigEntry, TickTickCoordinator
+from .entity import async_setup_list_entities
+from .entity import due_from_task as _due_from_task
+from .entity import parse_ticktick_datetime as _parse_ticktick_datetime
 from .ticktick_api_python.models.task import Task, TaskStatus
 
 
@@ -25,60 +25,9 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the TickTick todo platform config entry."""
-    coordinator = entry.runtime_data
-    registry = er.async_get(hass)
-    prefix = f"{entry.entry_id}-"
-    known: set[str] = set()
-
-    @callback
-    def _sync_lists() -> None:
-        """Add a to-do list for each new project and drop those that are gone."""
-        projects = coordinator.projects
-        if new := projects.keys() - known:
-            known.update(new)
-            async_add_entities(
-                TickTickTodoListEntity(
-                    coordinator, entry.entry_id, project_id, projects[project_id].name
-                )
-                for project_id in new
-            )
-
-        # An empty project list is more likely a hiccup than every list being
-        # deleted at once; removing the entities would lose their settings
-        if projects.keys() == {INBOX_ID}:
-            return
-        for reg_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
-            project_id = reg_entry.unique_id.removeprefix(prefix)
-            if reg_entry.domain == "todo" and project_id not in projects:
-                registry.async_remove(reg_entry.entity_id)
-                known.discard(project_id)
-
-    _sync_lists()
-    entry.async_on_unload(coordinator.async_add_listener(_sync_lists))
-
-
-def _parse_ticktick_datetime(value: Any) -> datetime | None:
-    """Parse a TickTick timestamp such as 2026-10-26T04:00:00.000+0000."""
-    if value is None or isinstance(value, datetime):
-        return value
-    try:
-        return datetime.strptime(str(value), "%Y-%m-%dT%H:%M:%S.%f%z")
-    except ValueError:
-        return dt_util.parse_datetime(str(value))
-
-
-def _due_from_task(task: Task) -> date | datetime | None:
-    """Return the task's due date as Home Assistant expects it.
-
-    All-day tasks become a date in the task's time zone; others an aware datetime.
-    """
-    due = _parse_ticktick_datetime(task.dueDate)
-    if due is None:
-        return None
-    if task.isAllDay:
-        zone = dt_util.get_time_zone(task.timeZone) if task.timeZone else None
-        return due.astimezone(zone or dt_util.get_default_time_zone()).date()
-    return due
+    async_setup_list_entities(
+        hass, entry, async_add_entities, "todo", TickTickTodoListEntity
+    )
 
 
 def _due_for_ticktick(due: date | datetime | None) -> tuple[datetime | None, bool]:

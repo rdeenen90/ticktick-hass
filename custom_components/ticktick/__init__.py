@@ -19,7 +19,7 @@ from .ticktick_api_python.ticktick_api import TickTickAPIClient
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = [Platform.TODO]
+PLATFORMS = [Platform.CALENDAR, Platform.SENSOR, Platform.TODO]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 

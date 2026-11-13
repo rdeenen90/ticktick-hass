@@ -47,3 +47,19 @@ jobs:
         run: ruff check custom_components tests
       - name: Test
         run: pytest
+      - name: Check the changelog covers the manifest version
+        run: bash scripts/release.sh --check
+
+  release:
+    # A new version in manifest.json on main is published once the checks pass
+    needs: [hassfest, hacs, tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: "ubuntu-latest"
+    permissions:
+      contents: write
+    steps:
+      - uses: "actions/checkout@v7"
+      - name: Publish the release if this version has none yet
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/release.sh

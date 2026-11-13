@@ -26,6 +26,19 @@
             "default": "[%key:common::config_flow::create_entry::authenticated%]"
         }
     },
+    "entity": {
+        "sensor": {
+            "overdue_tasks": {
+                "name": "Overdue tasks"
+            },
+            "tasks_due_today": {
+                "name": "Tasks due today"
+            },
+            "open_tasks": {
+                "name": "Open tasks"
+            }
+        }
+    },
     "options": {
         "step": {
             "init": {

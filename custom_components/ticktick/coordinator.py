@@ -52,7 +52,7 @@ class TickTickCoordinator(DataUpdateCoordinator[dict[str, ProjectWithTasks]]):
         )
         self.api = api
         self.projects: dict[str, Project] = {}
-        self._failing: set[str] = set()
+        self.failing: set[str] = set()
         self.access_token = access_token
 
     async def _async_update_data(self) -> dict[str, ProjectWithTasks]:
@@ -91,13 +91,13 @@ class TickTickCoordinator(DataUpdateCoordinator[dict[str, ProjectWithTasks]]):
             raise UpdateFailed(
                 f"Error communicating with API: {next(iter(failed.values()))}"
             )
-        for project_id in failed.keys() - self._failing:
+        for project_id in failed.keys() - self.failing:
             self.logger.warning(
                 "Could not update TickTick list %s, keeping its last known tasks: %s",
                 self.projects[project_id].name,
                 failed[project_id],
             )
-        self._failing = set(failed)
+        self.failing = set(failed)
         return data
 
     async def _fetch_project(self, project: Project) -> ProjectWithTasks:

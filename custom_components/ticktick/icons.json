@@ -1,4 +1,17 @@
 {
+    "entity": {
+        "sensor": {
+            "overdue_tasks": {
+                "default": "mdi:calendar-alert"
+            },
+            "tasks_due_today": {
+                "default": "mdi:calendar-today"
+            },
+            "open_tasks": {
+                "default": "mdi:format-list-checks"
+            }
+        }
+    },
     "services": {
         "get_task": {
             "service": "mdi:invoice-list"

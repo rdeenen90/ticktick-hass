@@ -154,8 +154,11 @@ def _create_project_handler(
                 # The list is gone for good, so don't leave its entity behind
                 registry = er.async_get(call.hass)
                 unique_id = f"{coordinator.config_entry.entry_id}-{args[PROJECT_ID]}"
-                if entity_id := registry.async_get_entity_id("todo", DOMAIN, unique_id):
-                    registry.async_remove(entity_id)
+                for domain in ("todo", "calendar"):
+                    if entity_id := registry.async_get_entity_id(
+                        domain, DOMAIN, unique_id
+                    ):
+                        registry.async_remove(entity_id)
             # Add, rename or drop the to-do list this call changed
             await coordinator.async_refresh()
         return {"data": response}
@@ -183,6 +186,7 @@ def _resolve_project_id(
         if (
             reg_entry is None
             or reg_entry.platform != DOMAIN
+            or reg_entry.domain not in ("todo", "calendar")
             or not reg_entry.unique_id.startswith(prefix)
         ):
             raise ServiceValidationError(f"{entity_id} is not a TickTick to-do list")
