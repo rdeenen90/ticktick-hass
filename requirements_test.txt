@@ -1,2 +1,4 @@
 pytest-homeassistant-custom-component
 ruff
+# Home Assistant installs its runtime packages with uv (scripts/develop.sh)
+uv
