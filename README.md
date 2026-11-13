@@ -138,6 +138,7 @@ A change made from Home Assistant only fetches the list it was made in.
 - A completed task cannot be reopened from Home Assistant, because TickTick's API does not return completed tasks.
 - If one list cannot be fetched, it keeps showing its last known tasks while the other lists update.
 - Sensors and calendars are recalculated on each update, so "overdue" can lag by up to one polling interval.
+- A task with a start that differs from its due date cannot be created through the services: TickTick's API stores the due date as the start too. Such a time range has to be set in the TickTick app.
 
 ## Troubleshooting
 
