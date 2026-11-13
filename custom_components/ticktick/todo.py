@@ -9,10 +9,12 @@ from homeassistant.components.todo import (
     TodoListEntityFeature,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
+from .const import INBOX_ID
 from .coordinator import TickTickConfigEntry, TickTickCoordinator
 from .ticktick_api_python.models.task import Task, TaskStatus
 
@@ -24,11 +26,35 @@ async def async_setup_entry(
 ) -> None:
     """Set up the TickTick todo platform config entry."""
     coordinator = entry.runtime_data
-    projects = await coordinator.async_get_projects()
-    async_add_entities(
-        TickTickTodoListEntity(coordinator, entry.entry_id, project.id, project.name)
-        for project in projects
-    )
+    registry = er.async_get(hass)
+    prefix = f"{entry.entry_id}-"
+    known: set[str] = set()
+
+    @callback
+    def _sync_lists() -> None:
+        """Add a to-do list for each new project and drop those that are gone."""
+        projects = coordinator.projects
+        if new := projects.keys() - known:
+            known.update(new)
+            async_add_entities(
+                TickTickTodoListEntity(
+                    coordinator, entry.entry_id, project_id, projects[project_id].name
+                )
+                for project_id in new
+            )
+
+        # An empty project list is more likely a hiccup than every list being
+        # deleted at once; removing the entities would lose their settings
+        if projects.keys() == {INBOX_ID}:
+            return
+        for reg_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
+            project_id = reg_entry.unique_id.removeprefix(prefix)
+            if reg_entry.domain == "todo" and project_id not in projects:
+                registry.async_remove(reg_entry.entity_id)
+                known.discard(project_id)
+
+    _sync_lists()
+    entry.async_on_unload(coordinator.async_add_listener(_sync_lists))
 
 
 def _parse_ticktick_datetime(value: Any) -> datetime | None:
@@ -87,11 +113,18 @@ def _map_task(
             modified = True
         field = _description_field(api_task)
         if (item.description or "").strip() != (getattr(api_task, field) or "").strip():
-            setattr(api_task, field, item.description)
+            if (item.description or "").strip():
+                setattr(api_task, field, item.description)
+            else:
+                api_task.clear(field)
             modified = True
 
         api_due = _parse_ticktick_datetime(api_task.dueDate)
-        if due is not None and (due != api_due or all_day != bool(api_task.isAllDay)):
+        if due is None:
+            if api_due is not None:
+                api_task.clear("dueDate", "startDate")
+                modified = True
+        elif due != api_due or all_day != bool(api_task.isAllDay):
             # A single-day task has startDate == dueDate; keep them together so
             # moving the due date doesn't turn it into a multi-day span.
             if _parse_ticktick_datetime(api_task.startDate) == api_due:
@@ -142,18 +175,16 @@ class TickTickTodoListEntity(CoordinatorEntity[TickTickCoordinator], TodoListEnt
         """Handle updated data from the coordinator."""
 
         projects_with_tasks = self.coordinator.data
+        if project := self.coordinator.projects.get(self._project_id):
+            # Follow a rename in TickTick
+            self._attr_name = project.name
 
         if projects_with_tasks is None:
             self._attr_todo_items = None
         else:
             tasks_to_add = []
-            for project_with_tasks in projects_with_tasks:
-                if (
-                    project_with_tasks.project.id != self._project_id
-                    or not project_with_tasks.tasks
-                ):
-                    continue
-
+            project_with_tasks = projects_with_tasks.get(self._project_id)
+            if project_with_tasks and project_with_tasks.tasks:
                 for task in project_with_tasks.tasks:
                     tasks_to_add.insert(0,  # noqa: PERF401
                         TodoItem(
@@ -203,13 +234,12 @@ class TickTickTodoListEntity(CoordinatorEntity[TickTickCoordinator], TodoListEnt
                         # Not supported by TickTick as they don't return completed tasks
             return False
 
-        projects_with_tasks = self.coordinator.data
+        project_with_tasks = self.coordinator.data.get(self._project_id)
         api_task = next(
             (
                 task
-                for project_with_tasks in projects_with_tasks
-                if project_with_tasks.tasks
-                for task in project_with_tasks.tasks
+                for task in (project_with_tasks.tasks if project_with_tasks else None)
+                or ()
                 if task.id == item.uid
             ),
             None,

@@ -17,6 +17,7 @@ from .conftest import (
     TASK,
     TASK_ID,
     project_data,
+    reset_api,
 )
 
 CREATE_URL = f"https://{CREATE_TASK}"
@@ -71,7 +72,7 @@ async def test_emptied_list_clears_items(
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """The last task disappears when the list becomes empty."""
-    aioclient_mock.clear_requests()
+    reset_api(aioclient_mock)
     aioclient_mock.get(PROJECT_DATA_URL, json=project_data())
 
     await _refresh(hass, setup_integration)
@@ -86,7 +87,7 @@ async def test_all_day_due_is_a_date(
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """An all-day task is due on a date, in the task's own time zone."""
-    aioclient_mock.clear_requests()
+    reset_api(aioclient_mock)
     aioclient_mock.get(
         PROJECT_DATA_URL,
         json=project_data(
@@ -111,7 +112,7 @@ async def test_timed_due_is_a_datetime(
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """A task with a time is due at that moment."""
-    aioclient_mock.clear_requests()
+    reset_api(aioclient_mock)
     aioclient_mock.get(
         PROJECT_DATA_URL,
         json=project_data({**TASK, "dueDate": "2026-11-20T09:30:00.000+0000"}),
@@ -129,7 +130,7 @@ async def test_checklist_uses_desc(
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """A checklist task shows its desc field as the description."""
-    aioclient_mock.clear_requests()
+    reset_api(aioclient_mock)
     aioclient_mock.get(
         PROJECT_DATA_URL,
         json=project_data({**TASK, "kind": "CHECKLIST", "desc": "From desc"}),

@@ -17,9 +17,18 @@ class ProjectWithTasks:
         self.columns = columns
 
     @staticmethod
-    def from_dict(data: dict) -> "ProjectWithTasks":
-        """Create a ProjectWithTasks instance from a dictionary."""
-        project = Project.from_dict(data["project"])
+    def from_dict(data: dict, project: Project | None = None) -> "ProjectWithTasks":
+        """Create a ProjectWithTasks instance from a dictionary.
+
+        `project` is used when the response carries no project, as for the inbox.
+        """
+        if not data:
+            # TickTick answers a project it does not know with an empty object
+            raise ValueError("TickTick returned no data for the project")
+        if data.get("project"):
+            project = Project.from_dict(data["project"])
+        if project is None:
+            raise ValueError("TickTick returned tasks without a project")
         tasks = (
             [
                 Task.from_dict(task)

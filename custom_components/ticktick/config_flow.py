@@ -4,10 +4,39 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
+import voluptuous as vol
+from homeassistant.config_entries import (
+    SOURCE_REAUTH,
+    ConfigEntry,
+    ConfigFlowResult,
+    OptionsFlowWithReload,
+)
+from homeassistant.core import callback
 from homeassistant.helpers import config_entry_oauth2_flow
+from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+)
 
-from .const import DOMAIN
+from .const import CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL, DOMAIN
+
+OPTIONS_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
+            NumberSelector(
+                NumberSelectorConfig(
+                    min=1,
+                    max=60,
+                    step=1,
+                    unit_of_measurement="min",
+                    mode=NumberSelectorMode.BOX,
+                )
+            ),
+            vol.Coerce(int),
+        )
+    }
+)
 
 
 class OAuth2FlowHandler(
@@ -16,6 +45,12 @@ class OAuth2FlowHandler(
     """Config flow to handle TickTick Integration OAuth2 authentication."""
 
     DOMAIN = DOMAIN
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> "TickTickOptionsFlow":
+        """Return the options flow."""
+        return TickTickOptionsFlow()
 
     @property
     def logger(self) -> logging.Logger:
@@ -43,3 +78,20 @@ class OAuth2FlowHandler(
                 self._get_reauth_entry(), data=data
             )
         return await super().async_oauth_create_entry(data)
+
+
+class TickTickOptionsFlow(OptionsFlowWithReload):
+    """Options for TickTick; saving them reloads the entry."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Set how often TickTick is polled."""
+        if user_input is not None:
+            return self.async_create_entry(data=user_input)
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self.add_suggested_values_to_schema(
+                OPTIONS_SCHEMA, self.config_entry.options
+            ),
+        )

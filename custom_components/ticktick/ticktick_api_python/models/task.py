@@ -15,6 +15,18 @@ class TaskPriority(Enum):
     HIGH = 5
 
 
+# What TickTick needs to receive to empty a field on update
+CLEAR_VALUES = {
+    "dueDate": None,
+    "startDate": None,
+    "content": "",
+    "desc": "",
+    "reminders": [],
+    "items": [],
+    "repeatFlag": "",
+}
+
+
 class Task(CheckListItem):
     """Task Class for TickTick.
 
@@ -67,6 +79,18 @@ class Task(CheckListItem):
         self.reminders = reminders if reminders else []
         self.repeatFlag = repeatFlag
         self.kind = kind
+        # Fields to empty in TickTick on update; see clear()
+        self.cleared: set[str] = set()
+
+    def clear(self, *fields: str) -> None:
+        """Empty fields in TickTick on the next update.
+
+        An update only changes the fields it carries, so leaving a field out
+        keeps its value; emptying one needs the explicit value TickTick expects.
+        """
+        for field in fields:
+            setattr(self, field, [] if CLEAR_VALUES[field] == [] else None)
+            self.cleared.add(field)
 
     def toJSON(self):
         """Serialize Task to json."""
@@ -93,7 +117,7 @@ class Task(CheckListItem):
                 return value.value
             return value
 
-        d = filter_none(self.__dict__)
+        d = filter_none({k: v for k, v in self.__dict__.items() if k != "cleared"})
 
         # Convert nested checklist items to plain dicts (and filter Nones there too)
         if "items" in d and isinstance(d["items"], list):
@@ -108,6 +132,10 @@ class Task(CheckListItem):
         # For the parent task, ensure status domain is 0/2 (TickTick quirk)
         if "status" in d:
             d["status"] = 2 if int(d["status"]) else 0
+
+        for field in self.cleared:
+            if field not in d:
+                d[field] = CLEAR_VALUES[field]
 
         return json.dumps(d, sort_keys=True)
 

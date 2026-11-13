@@ -16,6 +16,7 @@ from custom_components.ticktick.const import (
     DOMAIN,
     GET_PROJECTS,
     GET_PROJECTS_WITH_TASKS,
+    INBOX_ID,
 )
 
 PROJECT_ID = "project1"
@@ -43,9 +44,31 @@ TASK = {
 }
 
 
+INBOX_ENTITY_ID = "todo.inbox"
+INBOX_DATA_URL = f"https://{GET_PROJECTS_WITH_TASKS.format(projectId=INBOX_ID)}"
+# TickTick serves the inbox without a "project" key
+INBOX_DATA = {"tasks": [], "columns": []}
+
+
 def project_data(*tasks: dict) -> dict:
     """Return a TickTick 'project with data' response."""
     return {"project": PROJECT, "tasks": list(tasks), "columns": []}
+
+
+def reset_api(
+    aioclient_mock: AiohttpClientMocker,
+    projects: list[dict] | None = None,
+    inbox: dict | None = INBOX_DATA,
+) -> None:
+    """Forget the mocked responses and calls, keeping the project list and inbox.
+
+    Every update fetches those two, so a test only registers what it changes.
+    Pass `inbox=None` to leave the inbox for the test to register.
+    """
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(PROJECTS_URL, json=[PROJECT] if projects is None else projects)
+    if inbox is not None:
+        aioclient_mock.get(INBOX_DATA_URL, json=inbox)
 
 
 @pytest.fixture(autouse=True)
@@ -85,7 +108,7 @@ async def credentials(hass: HomeAssistant) -> None:
 @pytest.fixture
 def mock_api(aioclient_mock: AiohttpClientMocker) -> AiohttpClientMocker:
     """Mock TickTick with one project holding one task."""
-    aioclient_mock.get(PROJECTS_URL, json=[PROJECT])
+    reset_api(aioclient_mock)
     aioclient_mock.get(PROJECT_DATA_URL, json=project_data(TASK))
     return aioclient_mock
 

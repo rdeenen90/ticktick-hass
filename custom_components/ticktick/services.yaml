@@ -2,17 +2,29 @@ get_task:
   name: Get Task
   description: "Returns a task by Project ID and Task ID from TickTick."
   fields:
+    list:
+      name: List
+      description: The TickTick to-do list. Use this or Project ID.
+      example: todo.groceries
+      selector:
+        entity:
+          integration: ticktick
+          domain: todo
     projectId:
       name: Project ID
-      description: ID of the project (list) of tasks in TickTick.
-      required: true
+      description: ID of the project (list) in TickTick, as an alternative to List. Use "inbox" for the inbox.
       example: 6987a8plg0rad90bc38b672f
+      selector:
+        text: null
+    taskTitle:
+      name: Task title
+      description: Title of an open task in the list. Use this or Task ID; it must match exactly one task.
+      example: Milk
       selector:
         text: null
     taskId:
       name: Task ID
-      description: ID of the task in TickTick.
-      required: true
+      description: ID of the task in TickTick, as an alternative to Task title.
       example: 63b7bebb91c0a5474805fcd4
       selector:
         text: null
@@ -20,10 +32,17 @@ create_task:
   name: Create Task
   description: "Creates a task in TickTick."
   fields:
+    list:
+      name: List
+      description: The TickTick to-do list. Use this or Project ID.
+      example: todo.groceries
+      selector:
+        entity:
+          integration: ticktick
+          domain: todo
     projectId:
       name: Project ID
-      description: ID of the project (list) of tasks in TickTick.
-      required: true
+      description: ID of the project (list) in TickTick, as an alternative to List. Use "inbox" for the inbox.
       example: 6987a8plg0rad90bc38b672f
       selector:
         text: null
@@ -108,17 +127,29 @@ complete_task:
   name: Complete Task
   description: "Sets a task as done, completes a task in TickTick"
   fields:
+    list:
+      name: List
+      description: The TickTick to-do list. Use this or Project ID.
+      example: todo.groceries
+      selector:
+        entity:
+          integration: ticktick
+          domain: todo
     projectId:
       name: Project ID
-      description: ID of the project (list) of tasks in TickTick.
-      required: true
+      description: ID of the project (list) in TickTick, as an alternative to List. Use "inbox" for the inbox.
       example: 6987a8plg0rad90bc38b672f
+      selector:
+        text: null
+    taskTitle:
+      name: Task title
+      description: Title of an open task in the list. Use this or Task ID; it must match exactly one task.
+      example: Milk
       selector:
         text: null
     taskId:
       name: Task ID
-      description: ID of the task in TickTick.
-      required: true
+      description: ID of the task in TickTick, as an alternative to Task title.
       example: 63b7bebb91c0a5474805fcd4
       selector:
         text: null
@@ -126,17 +157,29 @@ delete_task:
   name: Delete Task
   description: "Deletes a task from TickTick"
   fields:
+    list:
+      name: List
+      description: The TickTick to-do list. Use this or Project ID.
+      example: todo.groceries
+      selector:
+        entity:
+          integration: ticktick
+          domain: todo
     projectId:
       name: Project ID
-      description: ID of the project (list) of tasks in TickTick.
-      required: true
+      description: ID of the project (list) in TickTick, as an alternative to List. Use "inbox" for the inbox.
       example: 6987a8plg0rad90bc38b672f
+      selector:
+        text: null
+    taskTitle:
+      name: Task title
+      description: Title of an open task in the list. Use this or Task ID; it must match exactly one task.
+      example: Milk
       selector:
         text: null
     taskId:
       name: Task ID
-      description: ID of the task in TickTick.
-      required: true
+      description: ID of the task in TickTick, as an alternative to Task title.
       example: 63b7bebb91c0a5474805fcd4
       selector:
         text: null
@@ -147,10 +190,17 @@ get_project:
   name: Get Project
   description: "Returns a project by Project ID basic information from TickTick"
   fields:
+    list:
+      name: List
+      description: The TickTick to-do list. Use this or Project ID.
+      example: todo.groceries
+      selector:
+        entity:
+          integration: ticktick
+          domain: todo
     projectId:
       name: Project ID
-      description: ID of the project (list) of tasks in TickTick.
-      required: true
+      description: ID of the project (list) in TickTick, as an alternative to List. Use "inbox" for the inbox.
       example: 6987a8plg0rad90bc38b672f
       selector:
         text: null
@@ -158,10 +208,17 @@ get_detailed_project:
   name: Get Project with tasks
   description: "Returns a project by Project ID and its tasks information from TickTick"
   fields:
+    list:
+      name: List
+      description: The TickTick to-do list. Use this or Project ID.
+      example: todo.groceries
+      selector:
+        entity:
+          integration: ticktick
+          domain: todo
     projectId:
       name: Project ID
-      description: ID of the project (list) of tasks in TickTick.
-      required: true
+      description: ID of the project (list) in TickTick, as an alternative to List. Use "inbox" for the inbox.
       example: 6987a8plg0rad90bc38b672f
       selector:
         text: null
@@ -210,10 +267,17 @@ delete_project:
   name: Delete Project
   description: "Deletes a project by Project ID from TickTick"
   fields:
+    list:
+      name: List
+      description: The TickTick to-do list. Use this or Project ID.
+      example: todo.groceries
+      selector:
+        entity:
+          integration: ticktick
+          domain: todo
     projectId:
       name: Project ID
-      description: ID of the project (list) of tasks in TickTick.
-      required: true
+      description: ID of the project (list) in TickTick, as an alternative to List. Use "inbox" for the inbox.
       example: 6987a8plg0rad90bc38b672f
       selector:
         text: null
@@ -221,10 +285,17 @@ update_project:
   name: Update project
   description: "Updates a project in TickTick. Only provided fields will be updated."
   fields:
+    list:
+      name: List
+      description: The TickTick to-do list. Use this or Project ID.
+      example: todo.groceries
+      selector:
+        entity:
+          integration: ticktick
+          domain: todo
     projectId:
       name: Project ID
-      description: ID of the project (list) of tasks in TickTick.
-      required: true
+      description: ID of the project (list) in TickTick, as an alternative to List. Use "inbox" for the inbox.
       example: 6987a8plg0rad90bc38b672f
       selector:
         text: null
@@ -268,17 +339,29 @@ update_task:
   name: Update Task
   description: "Updates an existing task in TickTick. Only provided fields will be updated."
   fields:
+    list:
+      name: List
+      description: The TickTick to-do list. Use this or Project ID.
+      example: todo.groceries
+      selector:
+        entity:
+          integration: ticktick
+          domain: todo
     projectId:
       name: Project ID
-      description: ID of the project (list) of tasks in TickTick.
-      required: true
+      description: ID of the project (list) in TickTick, as an alternative to List. Use "inbox" for the inbox.
       example: 6987a8plg0rad90bc38b672f
+      selector:
+        text: null
+    taskTitle:
+      name: Task title
+      description: Title of an open task in the list. Use this or Task ID; it must match exactly one task.
+      example: Milk
       selector:
         text: null
     taskId:
       name: Task ID
-      description: ID of the task in TickTick.
-      required: true
+      description: ID of the task in TickTick, as an alternative to Task title.
       example: 63b7bebb91c0a5474805fcd4
       selector:
         text: null

@@ -11,6 +11,14 @@ BASE_API_URL = f"{TICKTICK_HOST}/{API}"
 # === Parameters === #
 PROJECT_ID = "projectId"
 TASK_ID = "taskId"
+LIST = "list"
+TASK_TITLE = "taskTitle"
+
+# TickTick serves the inbox under this id although it is not in the project list
+INBOX_ID = "inbox"
+
+CONF_SCAN_INTERVAL = "scan_interval"
+DEFAULT_SCAN_INTERVAL = 1  # minutes
 
 # === Endpoints === #
 

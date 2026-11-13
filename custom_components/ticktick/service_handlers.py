@@ -14,7 +14,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
 from .builders import build_items, build_reminders, build_repeat_flag
-from .const import DOMAIN, PROJECT_ID, TASK_ID
+from .const import DOMAIN, LIST, PROJECT_ID, TASK_ID, TASK_TITLE
 from .coordinator import TickTickCoordinator
 from .ticktick_api_python.models.project import Kind, ViewMode
 from .ticktick_api_python.models.task import Task, TaskPriority
@@ -27,18 +27,24 @@ PROJECT_FIELDS = {
     "viewMode": vol.In([mode.value for mode in ViewMode]),
     "kind": vol.In([kind.value for kind in Kind]),
 }
-PROJECT_SCHEMA = vol.Schema({vol.Required(PROJECT_ID): cv.string})
+PROJECT_REF = {vol.Optional(PROJECT_ID): cv.string, vol.Optional(LIST): cv.entity_id}
+HAS_PROJECT_REF = cv.has_at_least_one_key(PROJECT_ID, LIST)
+PROJECT_SCHEMA = vol.All(vol.Schema(PROJECT_REF), HAS_PROJECT_REF)
 CREATE_PROJECT_SCHEMA = vol.Schema(
     {
         vol.Required("name"): cv.string,
         **{vol.Optional(field): check for field, check in PROJECT_FIELDS.items()},
     }
 )
-UPDATE_PROJECT_SCHEMA = PROJECT_SCHEMA.extend(
-    {
-        vol.Optional("name"): cv.string,
-        **{vol.Optional(field): check for field, check in PROJECT_FIELDS.items()},
-    }
+UPDATE_PROJECT_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            **PROJECT_REF,
+            vol.Optional("name"): cv.string,
+            **{vol.Optional(field): check for field, check in PROJECT_FIELDS.items()},
+        }
+    ),
+    HAS_PROJECT_REF,
 )
 
 
@@ -104,7 +110,7 @@ def async_register_services(hass: HomeAssistant) -> None:
     hass.services.async_register(
         DOMAIN,
         "create_project",
-        _create_project_handler("create_project", "name", *PROJECT_FIELDS, reload=True),
+        _create_project_handler("create_project", "name", *PROJECT_FIELDS, refresh=True),
         schema=CREATE_PROJECT_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
@@ -112,7 +118,7 @@ def async_register_services(hass: HomeAssistant) -> None:
         DOMAIN,
         "update_project",
         _create_project_handler(
-            "update_project", PROJECT_ID, "name", *PROJECT_FIELDS, reload=True
+            "update_project", PROJECT_ID, "name", *PROJECT_FIELDS, refresh=True
         ),
         schema=UPDATE_PROJECT_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
@@ -120,20 +126,22 @@ def async_register_services(hass: HomeAssistant) -> None:
     hass.services.async_register(
         DOMAIN,
         "delete_project",
-        _create_project_handler("delete_project", PROJECT_ID, reload=True),
+        _create_project_handler("delete_project", PROJECT_ID, refresh=True),
         schema=PROJECT_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
 
 
 def _create_project_handler(
-    method_name: str, *arg_names: str, reload: bool = False
+    method_name: str, *arg_names: str, refresh: bool = False
 ) -> Callable:
     """Create a handler for a project endpoint; only given fields are passed on."""
 
     async def handler(call: ServiceCall) -> dict[str, Any]:
         coordinator = _get_coordinator(call.hass)
         args = {arg: call.data[arg] for arg in arg_names if arg in call.data}
+        if PROJECT_ID in arg_names:
+            args[PROJECT_ID] = _resolve_project_id(call.hass, coordinator, call.data)
         try:
             response = await getattr(coordinator.api, method_name)(
                 **args, returnAsJson=True
@@ -141,17 +149,15 @@ def _create_project_handler(
         except Exception as e:
             raise HomeAssistantError(str(e)) from e
 
-        if reload:
-            entry = coordinator.config_entry
+        if refresh:
             if method_name == "delete_project":
                 # The list is gone for good, so don't leave its entity behind
                 registry = er.async_get(call.hass)
-                unique_id = f"{entry.entry_id}-{call.data[PROJECT_ID]}"
+                unique_id = f"{coordinator.config_entry.entry_id}-{args[PROJECT_ID]}"
                 if entity_id := registry.async_get_entity_id("todo", DOMAIN, unique_id):
                     registry.async_remove(entity_id)
-            # The to-do lists are created at setup, so set up again to add,
-            # rename or drop the list this call changed
-            call.hass.config_entries.async_schedule_reload(entry.entry_id)
+            # Add, rename or drop the to-do list this call changed
+            await coordinator.async_refresh()
         return {"data": response}
 
     return handler
@@ -165,15 +171,64 @@ def _get_coordinator(hass: HomeAssistant) -> TickTickCoordinator:
     return entries[0].runtime_data
 
 
+def _resolve_project_id(
+    hass: HomeAssistant, coordinator: TickTickCoordinator, data: dict[str, Any]
+) -> str:
+    """Return the project id from `projectId` or from a to-do list entity."""
+    if project_id := data.get(PROJECT_ID):
+        return project_id
+    if entity_id := data.get(LIST):
+        reg_entry = er.async_get(hass).async_get(entity_id)
+        prefix = f"{coordinator.config_entry.entry_id}-"
+        if (
+            reg_entry is None
+            or reg_entry.platform != DOMAIN
+            or not reg_entry.unique_id.startswith(prefix)
+        ):
+            raise ServiceValidationError(f"{entity_id} is not a TickTick to-do list")
+        return reg_entry.unique_id.removeprefix(prefix)
+    raise ServiceValidationError(f"Provide a to-do list ({LIST}) or a {PROJECT_ID}")
+
+
+async def _resolve_task_id(
+    coordinator: TickTickCoordinator, project_id: str, data: dict[str, Any]
+) -> str:
+    """Return the task id from `taskId` or by looking up an open task's title."""
+    if task_id := data.get(TASK_ID):
+        return task_id
+    title = str(data.get(TASK_TITLE) or "").strip()
+    if not title:
+        raise ServiceValidationError(f"Provide a {TASK_ID} or a {TASK_TITLE}")
+
+    try:
+        project = await coordinator.api.get_project_with_tasks(
+            project_id, returnAsJson=True
+        )
+    except Exception as e:
+        hint = await _project_hint(coordinator, project_id)
+        raise HomeAssistantError(f"{e}{hint}") from e
+    matches = [
+        task["id"]
+        for task in project.get("tasks") or []
+        if str(task.get("title") or "").strip().casefold() == title.casefold()
+        and task.get("status") in (0, "0", None)
+    ]
+    if not matches:
+        raise ServiceValidationError(f"No open task titled {title!r} in that list")
+    if len(matches) > 1:
+        raise ServiceValidationError(
+            f"{len(matches)} open tasks are titled {title!r} in that list; "
+            f"use {TASK_ID} to pick one"
+        )
+    return matches[0]
+
+
 async def _handle_update_task(call: ServiceCall) -> dict[str, Any]:
     """Handle the update_task service call."""
     coordinator = _get_coordinator(call.hass)
     client = coordinator.api
-    project_id = call.data.get(PROJECT_ID)
-    task_id = call.data.get(TASK_ID)
-
-    if not project_id or not task_id:
-        raise ServiceValidationError(f"Both {PROJECT_ID} and {TASK_ID} are required")
+    project_id = _resolve_project_id(call.hass, coordinator, call.data)
+    task_id = await _resolve_task_id(coordinator, project_id, call.data)
 
     try:
         # First, get the existing task
@@ -207,12 +262,19 @@ async def _handle_update_task(call: ServiceCall) -> dict[str, Any]:
             _LOGGER.debug(
                 "Updating task content and desc to: %s", existing_task.content
             )
+        # An empty content or desc empties it in TickTick
+        for field in ("content", "desc"):
+            if field in call.data and not call.data.get(field):
+                existing_task.clear(field)
 
         if "dueDate" in call.data:
             due_date = call.data.get("dueDate")
             due_date_time_zone = call.data.get("timeZone")
 
-            if isinstance(due_date, str):
+            if not due_date:
+                # No due date; TickTick keeps a task's start and due together
+                existing_task.clear("dueDate", "startDate")
+            elif isinstance(due_date, str):
                 existing_task.dueDate = _sanitize_date(due_date, due_date_time_zone)
             else:
                 existing_task.dueDate = due_date
@@ -227,7 +289,9 @@ async def _handle_update_task(call: ServiceCall) -> dict[str, Any]:
             start_date = call.data.get("startDate")
             start_date_time_zone = call.data.get("timeZone")
 
-            if isinstance(start_date, str):
+            if not start_date:
+                existing_task.clear("startDate")
+            elif isinstance(start_date, str):
                 existing_task.startDate = _sanitize_date(
                     start_date, start_date_time_zone
                 )
@@ -235,17 +299,25 @@ async def _handle_update_task(call: ServiceCall) -> dict[str, Any]:
                 existing_task.startDate = start_date
             _LOGGER.debug("Updated task start date to: %s", existing_task.startDate)
 
+        # For these three, an empty value empties the field in TickTick
         if "repeatFlag" in call.data:
-            existing_task.repeatFlag = build_repeat_flag(call.data.get("repeatFlag"))
+            if call.data.get("repeatFlag"):
+                existing_task.repeatFlag = build_repeat_flag(call.data["repeatFlag"])
+            else:
+                existing_task.clear("repeatFlag")
             _LOGGER.debug("Updating task repeat flag to: %s", existing_task.repeatFlag)
 
         if "reminders" in call.data:
             existing_task.reminders = build_reminders(call.data.get("reminders"))
+            if not existing_task.reminders:
+                existing_task.clear("reminders")
             _LOGGER.debug("Updating task reminders to: %s", existing_task.reminders)
 
         if "items" in call.data:
             # Replaces the whole list; pass a subtask's id to keep that subtask
             existing_task.items = build_items(call.data.get("items"))
+            if not existing_task.items:
+                existing_task.clear("items")
             _LOGGER.debug("Updating task to %s subtasks", len(existing_task.items))
 
         if "priority" in call.data:
@@ -295,6 +367,12 @@ def _create_handler(
         coordinator = _get_coordinator(call.hass)
         client_method = getattr(coordinator.api, method_name)
         args = {arg: call.data.get(arg) for arg in arg_names}
+        if PROJECT_ID in arg_names:
+            args[PROJECT_ID] = _resolve_project_id(call.hass, coordinator, call.data)
+        if TASK_ID in arg_names:
+            args[TASK_ID] = await _resolve_task_id(
+                coordinator, args[PROJECT_ID], call.data
+            )
         try:
             response = None
             if type == Task:

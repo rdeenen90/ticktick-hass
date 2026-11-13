@@ -12,14 +12,12 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
 from . import api
-from .const import DOMAIN
+from .const import CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL, DOMAIN
 from .coordinator import TickTickConfigEntry, TickTickCoordinator
 from .service_handlers import async_register_services
 from .ticktick_api_python.ticktick_api import TickTickAPIClient
 
 _LOGGER = logging.getLogger(__name__)
-
-SCAN_INTERVAL = datetime.timedelta(minutes=1)
 
 PLATFORMS = [Platform.TODO]
 
@@ -50,8 +48,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: TickTickConfigEntry) -> 
 
     tickTickApiClient = TickTickAPIClient(access_token, aiohttp_session)
 
+    scan_interval = datetime.timedelta(
+        minutes=entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+    )
     coordinator = TickTickCoordinator(
-        hass, _LOGGER, entry, SCAN_INTERVAL, tickTickApiClient, access_token
+        hass, _LOGGER, entry, scan_interval, tickTickApiClient, access_token
     )
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator

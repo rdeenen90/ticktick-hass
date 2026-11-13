@@ -11,7 +11,14 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClien
 
 from custom_components.ticktick.const import DOMAIN, OAUTH2_AUTHORIZE, OAUTH2_TOKEN
 
-from .conftest import ENTITY_ID, PROJECT_DATA_URL, PROJECTS_URL, TASK, project_data
+from .conftest import (
+    ENTITY_ID,
+    PROJECT_DATA_URL,
+    PROJECTS_URL,
+    TASK,
+    project_data,
+    reset_api,
+)
 
 
 def _reauth_flows(hass: HomeAssistant) -> list:
@@ -84,7 +91,7 @@ async def test_rejected_token_while_running_starts_reauth(
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """A 401 during a later poll asks the user to sign in again."""
-    aioclient_mock.clear_requests()
+    reset_api(aioclient_mock)
     aioclient_mock.get(PROJECT_DATA_URL, status=401)
 
     await setup_integration.runtime_data.async_refresh()
@@ -142,7 +149,7 @@ async def test_poll_picks_up_changes(
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """A refresh shows tasks added in TickTick."""
-    aioclient_mock.clear_requests()
+    reset_api(aioclient_mock)
     aioclient_mock.get(
         PROJECT_DATA_URL,
         json=project_data(TASK, {**TASK, "id": "task2", "title": "Bread"}),

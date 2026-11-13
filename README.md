@@ -21,7 +21,7 @@ This integration uses the [TickTick Open API](https://developer.ticktick.com/doc
 
 ## Features
 
-- **To-do lists:** add, rename, complete and delete tasks from Home Assistant, with due dates (all-day or timed) and descriptions
+- **To-do lists:** every TickTick list and the inbox, kept in step with TickTick as lists are added, renamed or deleted; add, rename, complete and delete tasks, with due dates (all-day or timed) and descriptions
 - **Task services:** get, create, update, complete and delete, including subtasks, reminders, repeat rules and priority
 - **Project services:** get, create, update and delete lists
 - **Re-authentication:** when the TickTick token expires, Home Assistant asks you to sign in again instead of breaking
@@ -48,12 +48,22 @@ If you don't want every list in Home Assistant, disable the ones you don't need 
 | `ticktick.complete_task` | Marks a task as done |
 | `ticktick.delete_task` | Deletes a task |
 
-Task services need a `projectId`, and most need a `taskId`. `ticktick.get_projects` lists the project IDs, and `ticktick.get_detailed_project` returns a project with its tasks and their IDs.
+Every task service needs to know the list, and most need a task:
+
+- **List:** pass `list` with a TickTick to-do list entity, or `projectId` with the ID from `ticktick.get_projects`. The inbox is `todo.inbox`, or `projectId: inbox`.
+- **Task:** pass `taskTitle` with the title of an open task in that list (it must match exactly one, ignoring case), or `taskId` with the ID from `ticktick.get_detailed_project`.
+
+```yaml
+action: ticktick.complete_task
+data:
+  list: todo.groceries
+  taskTitle: Milk
+```
 
 ```yaml
 action: ticktick.create_task
 data:
-  projectId: 6987a8plg0rad90bc38b672f
+  list: todo.groceries
   title: Weekly shop
   dueDate: "2026-11-20 18:00:00"
   priority: HIGH
@@ -70,6 +80,7 @@ data:
 - **Subtasks (`items`):** a list of titles, or objects with `title`, `completed` and `id`. On `update_task` the list replaces the existing subtasks; pass a subtask's `id` to keep it.
 - **Reminders (`reminders`):** a time before the task is due (`30 minutes`, `2 hours`, `1 day`), `on time`, `HH:MM` on the day of an all-day task, or a raw trigger such as `TRIGGER:P0DT9H0M0S`.
 - **Repeat (`repeatFlag`):** `daily`, `weekly`, `monthly`, `yearly`, `weekdays`, `every 2 weeks`, or a raw rule such as `RRULE:FREQ=DAILY;INTERVAL=1`.
+- **Emptying a field:** in `update_task`, pass an empty value to remove something: `dueDate: null`, `reminders: []`, `items: []`, `repeatFlag: ""` or `content: ""`. Removing the due date also removes the start date, reminders and repeat, as in the TickTick app.
 
 ### Projects
 
@@ -82,13 +93,17 @@ data:
 | `ticktick.update_project` | Changes only the fields you pass |
 | `ticktick.delete_project` | Deletes a project and all its tasks |
 
-Creating, updating or deleting a project reloads the integration, so the matching to-do list is added, renamed or removed right away.
+Project services that take a project accept `list` or `projectId`, like the task services. Creating, updating or deleting a project updates the to-do lists right away.
+
+## Options
+
+Under Settings → Devices & services → TickTick → Configure you can set the **polling interval** (1 to 60 minutes, default 1). Each update makes one request per list, so raise it if you have many lists and run into TickTick's rate limit.
 
 ## Known limitations
 
-- Lists are polled once a minute, so changes made in the TickTick app can take up to a minute to appear.
-- A list created in the TickTick app only appears after the integration is reloaded.
+- Lists are polled, so changes made in the TickTick app take up to one polling interval to appear. That includes lists that are added, renamed or deleted there.
 - A completed task cannot be reopened from Home Assistant, because TickTick's API does not return completed tasks.
+- If one list cannot be fetched, it keeps showing its last known tasks while the other lists update.
 
 ## Development
 

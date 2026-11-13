@@ -24,6 +24,7 @@ from .conftest import (
     PROJECTS_URL,
     TASK,
     project_data,
+    reset_api,
 )
 
 PROJECT_URL = f"https://{GET_PROJECT.format(projectId=PROJECT_ID)}"
@@ -81,9 +82,8 @@ async def test_create_project_adds_a_list(
     aioclient_mock: AiohttpClientMocker,
 ) -> None:
     """create_project sends only the given fields and the new list appears."""
-    aioclient_mock.clear_requests()
+    reset_api(aioclient_mock, projects=[PROJECT, NEW_PROJECT])
     aioclient_mock.post(PROJECTS_URL, json=NEW_PROJECT)
-    aioclient_mock.get(PROJECTS_URL, json=[PROJECT, NEW_PROJECT])
     aioclient_mock.get(PROJECT_DATA_URL, json=project_data(TASK))
     aioclient_mock.get(
         NEW_PROJECT_DATA_URL,
@@ -110,9 +110,8 @@ async def test_update_project_renames_the_list(
 ) -> None:
     """update_project sends only the given fields and the list is renamed."""
     renamed = {**PROJECT, "name": "Food"}
-    aioclient_mock.clear_requests()
+    reset_api(aioclient_mock, projects=[renamed])
     aioclient_mock.post(PROJECT_URL, json=renamed)
-    aioclient_mock.get(PROJECTS_URL, json=[renamed])
     aioclient_mock.get(
         PROJECT_DATA_URL, json={"project": renamed, "tasks": [TASK], "columns": []}
     )
@@ -134,9 +133,8 @@ async def test_delete_project_removes_the_list(
     entity_registry: er.EntityRegistry,
 ) -> None:
     """delete_project deletes the project and its to-do list entity."""
-    aioclient_mock.clear_requests()
+    reset_api(aioclient_mock, projects=[])
     aioclient_mock.delete(PROJECT_URL, text="")
-    aioclient_mock.get(PROJECTS_URL, json=[])
 
     response = await _call(hass, "delete_project", {"projectId": PROJECT_ID})
 

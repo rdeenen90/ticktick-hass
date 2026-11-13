@@ -25,5 +25,18 @@
         "create_entry": {
             "default": "[%key:common::config_flow::create_entry::authenticated%]"
         }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "TickTick options",
+                "data": {
+                    "scan_interval": "Polling interval"
+                },
+                "data_description": {
+                    "scan_interval": "How often to fetch your lists from TickTick. Each update makes one request per list, so raise this if you have many lists and run into TickTick's rate limit."
+                }
+            }
+        }
     }
 }

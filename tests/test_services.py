@@ -124,8 +124,8 @@ async def test_complete_and_delete_task(
     assert await _call(hass, service, IDS) == {"data": {"status": "Success"}}
 
     assert len(_calls(aioclient_mock, method, url)) == 1
-    # The service call itself plus one refresh of the project
-    assert aioclient_mock.call_count == polls_before + 2
+    # The service call itself plus a refresh: project list, inbox and the project
+    assert aioclient_mock.call_count == polls_before + 4
 
 
 async def test_api_error_is_raised(
